@@ -1,0 +1,4 @@
+cache-filter/target/
+management-service/node_modules/
+backend-service/node_modules/
+singleton-service/target/
