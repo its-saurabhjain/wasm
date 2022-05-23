@@ -1,0 +1,49 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: oidc-filter
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      proxy:
+        proxyVersion: '^1\.11.*'
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: envoy.filters.http.jwt_authn
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.wasm
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+          value:
+            config:
+              name: oidc-filter
+              rootId: oidc-filter_root
+              configuration:
+                "@type": "type.googleapis.com/google.protobuf.StringValue"
+                value: |
+                  {
+                    "auth_cluster": "outbound|9080||keycloak.oidc.svc.cluster.local",
+                    "auth_host": "keycloak.paas.io:9080",
+                    "login_uri": "http://keycloak.paas.io:9080/realms/master/protocol/openid-connect/auth",
+                    "token_uri": "/realms/master/protocol/openid-connect/token",
+                    "client_id": "test",
+                    "client_secret": "imNsSZq7BsI7SvYKpwjoLuiMrUjskngd"
+                  }
+              vmConfig:
+                code:
+                  local:
+                    filename: /var/local/lib/wasm-filters/oidc.wasm
+                runtime: envoy.wasm.runtime.v8
+                vmId: oidc-filter
+                allow_precompiled: true
+  workloadSelector:
+    labels:
+      app: httpbin

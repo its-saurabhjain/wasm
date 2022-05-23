@@ -1,0 +1,28 @@
+apiVersion: "security.istio.io/v1beta1"
+kind: "RequestAuthentication"
+metadata:
+  name: "jwt-example"
+  namespace: httpapp
+spec:
+  selector:
+    matchLabels:
+      app: httpbin
+  jwtRules:
+  - issuer: http://keycloak.paas.io:9080/realms/master
+    jwksUri: "http://keycloak.oidc.svc.cluster.local:9080/realms/master/protocol/openid-connect/certs"
+    forwardOriginalToken: true
+---
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "frontend-ingress"
+  namespace: httpapp
+spec:
+  selector:
+    matchLabels:
+      app: httpbin
+  action: DENY
+  rules:
+  - from:
+    - source:
+        notRequestPrincipals: ["*"]
